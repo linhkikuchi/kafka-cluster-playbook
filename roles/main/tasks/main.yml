@@ -1,0 +1,100 @@
+---
+
+- include: setup.yml
+
+- name: Create keystore key from existing cert
+  command: "openssl pkcs12 -export -in certs/sli.io_combined.crt -inkey private/sli.io.key -out sli.io.p12 -passout pass:{{keystore_pass}}"
+  args:
+    chdir: /etc/pki/tls
+    creates: sli.io.p12
+
+- name: Convert keystore to JKS
+  command: "keytool -importkeystore -srckeystore sli.io.p12 -srcstoretype PKCS12 -destkeystore sli.io.jks -deststoretype JKS -srcstorepass {{keystore_pass}} -deststorepass {{keystore_pass}}"
+  args:
+    chdir: /etc/pki/tls
+    creates: keystore.io.jks
+
+- name: add user kafka
+  user:
+    name: kafka
+    shell: /bin/bash
+    groups: kafka
+
+- name: Install kafka package from my-repo
+  yum: name={{item}} state=latest enablerepo={{private_repo}}
+  with_items:
+    - kafka
+  tags:
+    - my-repo
+    - kafka
+
+- include: monitoring.yml
+
+- name: create myid for server1
+  shell: echo "1" > /var/lib/zookeeper/myid
+  become: yes
+  become_user: kafka
+  when: inventory_hostname in (groups.server1)|union(groups.stage1)
+  tags:
+    - kafka
+    - zookeeper
+    - zookeeper id
+
+- name: create myid for server2
+  shell: echo "2" > /var/lib/zookeeper/myid
+  become: yes
+  become_user: kafka
+  when: inventory_hostname in (groups.server2)|union(groups.stage2)
+  tags:
+    - kafka
+    - zookeeper
+    - zookeeper id
+
+- name: create myid for server3
+  shell: echo "3" > /var/lib/zookeeper/myid
+  become: yes
+  become_user: kafka
+  when: inventory_hostname in (groups.server3)|union(groups.stage3)
+    - kafka
+    - zookeeper
+    - zookeeper id
+
+- name: copy clientssl.properties to kafka config
+  template:
+    src: clientssl.properties.j2
+    dest: "{{kafka_conf}}/clientssl.properties"
+    owner: kafka
+    group: kafka
+  tags:
+    - kafka
+    - zookeeper
+
+- name: Config zookeeper
+  template:
+    src: zookeeper.properties.j2
+    dest: "{{kafka_conf}}/zookeeper.properties"
+    owner: kafka
+    group: kafka
+    backup: yes
+    force: yes
+  notify: restart-zookeeper
+  tags:
+    - kafka
+    - zookeeper
+    - zookeeper config
+
+# to call handler before running the next task
+- meta: flush_handlers  
+
+- name: Config kafka server
+  template:
+    src: server.properties.j2
+    dest: "{{kafka_conf}}/server.properties"
+    owner: kafka
+    group: kafka
+    backup: yes
+    force: yes
+  notify: restart-kafka
+  tags:
+    - kafka
+    - kafka config

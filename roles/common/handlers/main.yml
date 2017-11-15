@@ -1,0 +1,17 @@
+---
+
+### RESTART/RELOAD ###
+- name: restart-iptables
+  service: name=iptables state=restarted enabled=yes
+
+- name: restart-kafka
+  service: name=kafka state=restarted enabled=yes
+
+- name: restart-zookeeper
+  service: name=zookeeper state=restarted enabled=yes
+
+- name: restart-nrpe
+  service: name=nrpe state=restarted enabled=yes
+
+- name: restart-munin-node
+  service: name=munin-node state=restarted enabled=yes

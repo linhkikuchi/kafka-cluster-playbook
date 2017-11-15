@@ -1,0 +1,12 @@
+---
+- name: SLI Base setup
+  hosts:
+    - "{{server}}"
+  user: root
+  connection: ssh
+  gather_facts: yes
+  roles:
+    - common
+    - main
+  tags:
+    - base

@@ -1,0 +1,14 @@
+dataDir=/var/lib/zookeeper
+clientPort={{zookeeper_port}}
+{% if inventory_hostname in groups.prod %}
+server.1={{server1_name}}:2888:3888
+server.2={{server2_name}}:2888:3888
+server.3={{server3_name}}:2888:3888
+{% endif %}
+{% if inventory_hostname in groups.stage %}
+server.1={{stage1_name}}:2888:3888
+server.2={{stage2_name}}:2888:3888
+server.3={{stage3_name}}:2888:3888
+{% endif %}
+initLimit=5
+syncLimit=2

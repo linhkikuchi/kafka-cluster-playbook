@@ -1,0 +1,112 @@
+############################# Server Basics #############################
+
+# The id of the broker. This must be set to a unique integer for each broker.
+{% if inventory_hostname in (groups.server1)|union(groups.stage1) %}
+broker.id=1
+{% endif %}
+{% if inventory_hostname in (groups.server2)|union(groups.stage2) %}
+broker.id=2
+{% endif %}
+{% if inventory_hostname in (groups.server3)|union(groups.stage3) %}
+broker.id=3
+{% endif %}
+host.name={{inventory_hostname}}
+
+# Switch to enable topic deletion or not, default value is false
+delete.topic.enable=false
+
+############################# Socket Server Settings #############################
+
+listeners=PLAINTEXT://:9092,SSL://:9093
+{% if inventory_hostname in groups.server1 %}
+advertised.listeners=PLAINTEXT://{{server1_ip_ext}}:9092,SSL://{{server1_ip_ext}}:9093
+{% endif %}
+{% if inventory_hostname in groups.server2 %}
+advertised.listeners=PLAINTEXT://{{server2_ip_ext}}:9092,SSL://{{server2_ip_ext}}:9093
+{% endif %}
+{% if inventory_hostname in groups.server3 %}
+advertised.listeners=PLAINTEXT://{{server3_ip_ext}}:9092,SSL://{{server3_ip_ext}}:9093
+{% endif %}
+ssl.keystore.location={{keystore_file}}
+ssl.keystore.password={{keystore_pass}}
+ssl.key.password={{keystore_pass}}
+security.inter.broker.protocol=SSL
+
+# The number of threads that the server uses for receiving requests from the network and sending responses to the network
+num.network.threads=3
+
+# The number of threads that the server uses for processing requests, which may include disk I/O
+num.io.threads=8
+
+# The send buffer (SO_SNDBUF) used by the socket server
+socket.send.buffer.bytes=102400
+
+# The receive buffer (SO_RCVBUF) used by the socket server
+socket.receive.buffer.bytes=102400
+
+# The maximum size of a request that the socket server will accept (protection against OOM)
+socket.request.max.bytes=104857600
+
+
+############################# Log Basics #############################
+
+# A comma seperated list of directories under which to store log files
+{% if inventory_hostname in groups.prod %}
+log.dirs=/mnt/disk0/kafka-logs
+{% endif %}
+{% if inventory_hostname in groups.stage %}
+log.dirs=/var/lib/kafka/kafka-logs
+{% endif %}
+
+num.partitions=9
+
+num.recovery.threads.per.data.dir=1
+
+############################# Internal Topic Settings  #############################
+# The replication factor for the group metadata internal topics "__consumer_offsets" and "__transaction_state"
+# For anything other than development testing, a value greater than 1 is recommended for to ensure availability such as 3.
+offsets.topic.replication.factor=3
+transaction.state.log.replication.factor=3
+transaction.state.log.min.isr=3
+# offsets retention for 1 month
+offsets.retention.minutes=43200
+
+############################# Log Flush Policy #############################
+
+default.replication.factor=3
+min.insync.replicas=2
+# The number of messages to accept before forcing a flush of data to disk
+#log.flush.interval.messages=10000
+
+# The maximum amount of time a message can sit in a log before we force a flush
+#log.flush.interval.ms=1000
+
+############################# Log Retention Policy #############################
+
+# The minimum age of a log file to be eligible for deletion due to age, one month
+log.retention.hours=720
+
+# A size-based retention policy for logs. Segments are pruned from the log as long as the remaining
+# segments don't drop below log.retention.bytes. Functions independently of log.retention.hours.
+#log.retention.bytes=1073741824
+
+# The maximum size of a log segment file. When this size is reached a new log segment will be created.
+log.segment.bytes=1073741824
+
+# The interval at which log segments are checked to see if they can be deleted according
+# to the retention policies
+log.retention.check.interval.ms=300000
+
+############################# Zookeeper #############################
+{% if inventory_hostname in groups.prod %}
+zookeeper.connect={{server1_name}}:{{zookeeper_port}},{{server2_name}}:{{zookeeper_port}},{{server3_name}}:{{zookeeper_port}}
+{% endif %}
+{% if inventory_hostname in groups.stage %}
+zookeeper.connect={{stage1_name}}:{{zookeeper_port}},{{stage2_name}}:{{zookeeper_port}},{{stage3_name}}:{{zookeeper_port}}
+{% endif %}
+# Timeout in ms for connecting to zookeeper
+zookeeper.connection.timeout.ms=16000
+
+############################# Group Coordinator Settings #############################
+
+group.initial.rebalance.delay.ms=3

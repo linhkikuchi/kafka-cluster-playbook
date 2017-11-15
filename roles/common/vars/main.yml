@@ -1,0 +1,19 @@
+---
+private_repo: my-repo
+kafka_conf: /opt/kafka/config
+keystore_file: /etc/pki/tls/keystore.io.jks
+nagios_plugins: /usr/lib64/nagios/plugins
+kafka_bin: /opt/kafka/bin
+zookeeper_port: 2281
+keystore_pass: {{keystore_pass}}
+server1_name: kafka1-1.prod
+server2_name: kafka1-2.prod
+server3_name: kafka1-3.prod
+server1_ip_ext: 
+server2_ip_ext: 
+server3_ip_ext: 
+nrpe_conf: /etc/nrpe.d
+stage1_name: kafka1-1.stage
+stage2_name: kafka1-2.stage
+stage3_name: kafka1-3.stage
+monitoring_server_ip:

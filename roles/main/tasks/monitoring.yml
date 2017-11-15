@@ -1,0 +1,82 @@
+---
+- name: Install monitoring Packages
+  yum: name={{item}} state=present enablerepo=epel
+  with_items:
+    - nrpe
+    - nagios-plugins-all
+    - munin-node
+  tags:
+    - nagios
+    - munin
+
+- name: Remove unused munin plugin symlinks
+  file: path=/{{item.path}} state=absent
+  with_items:
+    - { path: /etc/munin/plugins/apache_accesses }
+    - { path: /etc/munin/plugins/apache_processes }
+    - { path: /etc/munin/plugins/apache_volume }
+  tags: 
+    - munin
+   
+- name: Install munin-searcher package from my-repo
+  yum: name={{item}} state=latest enablerepo={{private_repo}}
+  with_items:
+    - munin-searcher
+  notify: restart-munin-node
+  tags:
+    - munin
+
+- name: copy jmx plugins to plugins folder
+  copy:
+    src: "{{ role_path }}/files/{{item}}"
+    dest: "{{ nagios_plugins }}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - check_jmx
+    - check_jmx.jar
+  tags:
+    - nagios
+
+- name: copy updated kafka start up script that has jmx to server
+  copy:
+    src: "{{ role_path }}/files/{{item}}"
+    dest: "{{ kafka_bin }}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - kafka-run-class.sh
+    - kafka-server-start.sh
+  tags:
+    - nagios
+
+- name: allow nagios-chc to monitor kafka cluster
+  lineinfile:
+    backrefs: yes
+    dest: /etc/nagios/nrpe.cfg
+    regexp: '^allowed_hosts=127.0.0.1'
+    line: 'allowed_hosts=127.0.0.1,{{monitoring_server_ip}}'
+    state: present
+  notify: restart-nrpe
+  tags:
+    - nagios
+
+- name: copy check_command to nrpe conf
+  copy:
+    src: "{{ role_path }}/files/{{item}}"
+    dest: "{{ nrpe_conf }}"
+    owner: root
+    group: root
+    mode: 0700
+  with_items:
+    - check_command.cfg
+  notify: restart-nrpe
+  tags:
+    - nagios
+
+# to call handler before running the next task
+- meta: flush_handlers
+  tags:
+    - nagios

@@ -1,0 +1,85 @@
+---
+- name: upgrade all packages
+  yum: name=* state=latest
+
+- name: Install Basic Packages
+  yum: name={{item}} state=present
+  with_items:
+    - curl
+    - iptables-services
+    - rsync
+    - tuned
+    - wget
+  tags:
+    - packages
+    - tuned
+
+- name: Install private repository
+  yum: name=https://yum.my-repository.com:444/my-yum-repository-1-10.noarch.rpm state=present
+  tags:
+    - my-repo
+
+# If epel is installed by default, then this action will fail
+- name: Install EPEL repository
+  yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ansible_distribution_major_version}}.noarch.rpm state=present
+  ignore_errors: yes
+  tags:
+    - epel
+
+- name: Install EPEL Packages
+  yum: name={{item}} state=present enablerepo=epel
+  with_items:
+    - joe
+    - mtr
+    - nano
+    - nmap
+    - openssh
+    - sysstat
+    - telnet
+    - vim-enhanced
+    - yum-utils
+  tags:
+    - epel
+
+- name: Install SLI User Packages, sli.io certs and yum-cron
+  yum: name={{item}} state=latest enablerepo={{private_repo}}
+  with_items:
+    - root-config-searcher
+    - gbrain-config-searcher
+    - sli-io-ssl-certificate.noarch
+    - yum-cron-conf
+    - java
+  tags:
+    - my-repo
+    - sli-io
+    - yum-cron
+
+- name: Enable colours on nano
+  replace: dest=/etc/nanorc regexp='^# (include ".*.nanorc")$' replace='\1' backup=yes
+  tags:
+    - bashrc
+
+- name: Disable Services
+  service: name={{item}} enabled=no state=stopped
+  with_items:
+    - chronyd
+    - firewalld
+    - postfix
+  ignore_errors: yes
+  tags:
+    - services
+
+- name: Copy iptables
+  template:
+    src: iptables.j2
+    dest: /etc/sysconfig/iptables
+    backup: yes
+    force: yes
+  notify: restart-iptables
+  tags:
+    - iptables
+
+# to call handler before running the next task
+- meta: flush_handlers
+  tags:
+    - iptables
